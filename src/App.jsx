@@ -5,6 +5,7 @@ import './App.css';
 import LocationSearch from './components/LocationSearch';
 import StoreModal from './components/StoreModal';
 import ProductFilter from './components/ProductFilter';
+import { Analytics } from "@vercel/analytics/react"
 
 // Fix for default marker icons in react-leaflet
 import L from 'leaflet';
@@ -173,7 +174,7 @@ function App() {
     <div className="app">
       <header className="header">
         <h1>🌱 Madspild Map</h1>
-        <p>Find food waste deals near you in Copenhagen</p>
+        <p>Find food waste deals near you</p>
       </header>
 
       <LocationSearch 
@@ -285,6 +286,7 @@ function App() {
           onClose={() => setSelectedStore(null)}
         />
       )}
+      <Analytics />
     </div>
   );
 }

@@ -15,6 +15,7 @@
     "prepare": "node -e \"try { require('husky').install() } catch (e) {}\""
   },
   "dependencies": {
+    "@vercel/analytics": "^1.6.1",
     "leaflet": "^1.9.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
