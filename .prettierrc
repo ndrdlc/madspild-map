@@ -1,0 +1,33 @@
+{
+  "semi": true,
+  "trailingComma": "es5",
+  "singleQuote": true,
+  "printWidth": 100,
+  "tabWidth": 2,
+  "useTabs": false,
+  "arrowParens": "always",
+  "endOfLine": "lf"
+}
+```
+
+---
+
+## **4. .prettierignore**
+```
+# Dependencies
+node_modules
+
+# Production
+dist
+build
+
+# Misc
+.DS_Store
+*.log
+
+# Git
+.git
+.gitignore
+
+# Config files
+package-lock.json

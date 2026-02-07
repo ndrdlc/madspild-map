@@ -1,0 +1,268 @@
+.app {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.header p {
+  margin: 5px 0 0 0;
+  opacity: 0.9;
+}
+
+/* Mobile-optimized header */
+@media (max-width: 768px) {
+  .header {
+    padding: 12px 16px;
+  }
+  
+  .header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .header p {
+    font-size: 0.9rem;
+  }
+}
+
+.loading, .error, .no-results {
+  padding: 15px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.loading {
+  background-color: #e3f2fd;
+  color: #1976d2;
+  background: linear-gradient(90deg, #e3f2fd 0%, #bbdefb 50%, #e3f2fd 100%);
+  background-size: 200% auto;
+  animation: shimmer 2s linear infinite;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: 200% center;
+  }
+}
+
+.error {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.no-results {
+  background-color: #fff3e0;
+  color: #e65100;
+}
+
+.popup-content h3 {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.popup-content p {
+  margin: 5px 0;
+  color: #666;
+}
+
+.popup-content .distance {
+  color: #4caf50;
+  font-weight: 600;
+}
+
+.offers {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+}
+
+.offers-list {
+  margin-top: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.offer-item {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  margin: 8px 0;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.product-image {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.offer-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.offer-details strong {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 14px;
+  color: #333;
+}
+
+.price-info {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 5px 0;
+}
+
+.new-price {
+  font-size: 16px;
+  font-weight: bold;
+  color: #4caf50;
+}
+
+.old-price {
+  font-size: 13px;
+  color: #999;
+  text-decoration: line-through;
+}
+
+.discount {
+  font-size: 12px;
+  font-weight: bold;
+  color: white;
+  background: #ff5722;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.stock-info {
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+}
+
+.more-items {
+  text-align: center;
+  padding: 10px;
+  color: #666;
+  font-style: italic;
+}
+
+.more-items p {
+  margin: 0 0 10px 0;
+}
+
+.view-all-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-top: 8px;
+}
+
+.view-all-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* Map container styles for scrollable layout */
+.map-container-wrapper {
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.map-container {
+  width: 100%;
+  height: 800px;
+  min-height: 600px;
+  margin: 0 20px 20px 20px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Large desktops - more screen space */
+@media (min-width: 1440px) {
+  .map-container {
+    height: 1000px;
+    max-width: calc(100% - 40px);
+  }
+}
+
+/* Tablets */
+@media (max-width: 1024px) {
+  .map-container {
+    height: 700px;
+    max-width: calc(100% - 40px);
+  }
+}
+
+/* Mobile - compact but usable */
+@media (max-width: 768px) {
+  .map-container {
+    height: 600px;
+    min-height: 500px;
+    margin: 0 10px 75px 10px;
+    border-radius: 8px;
+  }
+}
+
+/* Small mobile */
+@media (max-width: 480px) {
+  .map-container {
+    height: 500px;
+  }
+}
+
+/* Landscape mode - maximize map visibility */
+@media (max-width: 900px) and (orientation: landscape) {
+  .header {
+    padding: 8px 16px;
+  }
+  
+  .header h1 {
+    font-size: 1.2rem;
+  }
+  
+  .header p {
+    display: none; /* Hide subtitle to save space */
+  }
+  
+  .map-container {
+    height: 400px;
+  }
+}
+
+/* Ensure smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+}
