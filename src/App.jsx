@@ -54,19 +54,19 @@ function App() {
       
       const apiKey = import.meta.env.VITE_SALLING_API_KEY;
       if (!apiKey) {
-        throw new Error('API key not found. Please add VITE_SALLING_API_KEY to .env.local');
+        setError('API key not found. Please contact the administrator.');
+        setLoading(false);
+        console.error('VITE_SALLING_API_KEY not found in environment variables');
+        return;
       }
 
       // Round radius to integer - API might not accept decimal values
       const radiusInt = Math.ceil(radius);
       
-      const url = `https://api.sallinggroup.com/v1/food-waste/?geo=${lat},${lng}&radius=${radiusInt}`;
-      
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-        }
-      });
+      // Use Vercel serverless function instead of direct API call
+      const url = `/api/food-waste?lat=${lat}&lng=${lng}&radius=${radiusInt}`;
+
+      const response = await fetch(url);
       
       if (response.status === 500) {
         throw new Error(`The search area is too large (${radius.toFixed(1)} km radius). Try zooming in closer or searching a smaller area.`);
