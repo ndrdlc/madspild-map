@@ -18,7 +18,8 @@ export default async function handler(req, res) {
       });
     }
 
-    const apiKey = process.env.VITE_SALLING_API_KEY;
+    // Server-side only (do NOT use VITE_ prefix here)
+    const apiKey = process.env.SALLING_API_KEY;
 
     if (!apiKey) {
       console.error('API key not found in environment variables');
@@ -27,9 +28,17 @@ export default async function handler(req, res) {
       });
     }
 
-    const apiUrl = `https://api.sallinggroup.com/v1/food-waste/?geo=${lat},${lng}&radius=${radius}`;
-    
-    console.log('Fetching from Salling API:', apiUrl);
+    const latNum = Number.parseFloat(lat);
+    const lngNum = Number.parseFloat(lng);
+    const radiusNum = Number.parseInt(radius, 10);
+
+    if (!Number.isFinite(latNum) || !Number.isFinite(lngNum) || !Number.isFinite(radiusNum)) {
+      return res.status(400).json({
+        error: 'Invalid parameters: lat/lng must be numbers and radius must be an integer',
+      });
+    }
+
+    const apiUrl = `https://api.sallinggroup.com/v1/food-waste/?geo=${latNum},${lngNum}&radius=${radiusNum}`;
 
     const response = await fetch(apiUrl, {
       headers: {

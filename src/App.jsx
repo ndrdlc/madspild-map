@@ -52,22 +52,39 @@ function App() {
     try {
       setLoading(true);
       setError(null);
-      
-      const apiKey = import.meta.env.VITE_SALLING_API_KEY;
-      if (!apiKey) {
-        setError('API key not found. Please contact the administrator.');
-        setLoading(false);
-        console.error('VITE_SALLING_API_KEY not found in environment variables');
-        return;
-      }
 
       // Round radius to integer - API might not accept decimal values
       const radiusInt = Math.ceil(radius);
-      
-      // Use Vercel serverless function instead of direct API call
-      const url = `/api/food-waste?lat=${lat}&lng=${lng}&radius=${radiusInt}`;
 
-      const response = await fetch(url);
+      // Prefer serverless proxy (works on Vercel). In local Vite dev, `/api/*` may
+      // resolve to a static JS file, so we fall back to direct API in DEV.
+      const proxyUrl = `/api/food-waste?lat=${lat}&lng=${lng}&radius=${radiusInt}`;
+      let response = await fetch(proxyUrl);
+
+      const proxyContentType = response.headers.get('content-type') || '';
+      const proxyLooksLikeJson = proxyContentType.includes('application/json');
+
+      if (!response.ok || !proxyLooksLikeJson) {
+        // Allow local fallback if a VITE_ key is present (e.g. `npm run dev` or `vite preview`).
+        const apiKey = import.meta.env.VITE_SALLING_API_KEY;
+
+        if (!apiKey) {
+          const text = await response.text();
+          throw new Error(
+            `API proxy returned an invalid response (${response.status}). ` +
+              `Got content-type "${proxyContentType}". ` +
+              `Response starts with: ${JSON.stringify(text.slice(0, 40))}`
+          );
+        }
+
+        // Fallback: call Salling API directly (requires a VITE_ key)
+        const directUrl = `https://api.sallinggroup.com/v1/food-waste/?geo=${lat},${lng}&radius=${radiusInt}`;
+        response = await fetch(directUrl, {
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+          },
+        });
+      }
       
       if (response.status === 500) {
         throw new Error(`The search area is too large (${radius.toFixed(1)} km radius). Try zooming in closer or searching a smaller area.`);
