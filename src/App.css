@@ -266,3 +266,44 @@ body {
   padding: 0;
   overflow-y: auto;
 }
+
+/* Fix Leaflet popup close button on mobile */
+.leaflet-popup-close-button {
+  font-size: 24px !important;
+  width: 30px !important;
+  height: 30px !important;
+  padding: 4px 0 0 0 !important;
+  line-height: 24px !important;
+}
+
+/* Make popup content scrollable on mobile */
+@media (max-width: 768px) {
+  .leaflet-popup-content-wrapper {
+    max-width: calc(100vw - 60px) !important;
+    max-height: 70vh !important;
+    overflow-y: auto !important;
+  }
+  
+  .leaflet-popup-content {
+    margin: 10px 10px !important;
+    max-width: 100% !important;
+  }
+  
+  /* Ensure close button is always visible */
+  .leaflet-popup-close-button {
+    right: 5px !important;
+    top: 5px !important;
+    z-index: 1000 !important;
+  }
+  
+  /* Make popup scrollable */
+  .popup-content {
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+  
+  .offers-list {
+    max-height: 300px;
+    overflow-y: auto;
+  }
+}
