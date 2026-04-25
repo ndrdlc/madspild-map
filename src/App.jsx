@@ -73,6 +73,7 @@ export default function App() {
   const [filter, setFilter]       = useState('all');
   const [distance, setDistance]   = useState(10);
   const [city, setCity]           = useState('Copenhagen');
+  const [railOpen, setRailOpen]   = useState(true);
   const [selectedId, setSelectedId] = useState(null);
   const [hoveredId, setHoveredId]   = useState(null);
   const [savedIds, setSavedIds]     = useState(() => {
@@ -226,6 +227,8 @@ export default function App() {
         CHAINS={CHAINS} fmtKm={fmtKm}
         loading={loading} error={error}
         onLocationChange={handleLocationChange}
+        railOpen={railOpen}
+        onToggleRail={() => setRailOpen(o => !o)}
       />
 
       <main className="canvas">

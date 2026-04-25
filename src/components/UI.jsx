@@ -36,6 +36,7 @@ export function LeftRail({
   CHAINS, fmtKm,
   loading, error,
   onLocationChange,
+  railOpen, onToggleRail,
 }) {
   const [geoStatus, setGeoStatus] = useState('');
 
@@ -69,7 +70,7 @@ export function LeftRail({
   }, [query, onLocationChange, setQuery]);
 
   return (
-    <aside className="rail">
+    <aside className={`rail${railOpen === false ? ' rail--collapsed' : ''}`}>
       <header className="rail-head">
         <div className="brand">
           <svg viewBox="0 0 24 24" width="22" height="22" className="brand-mark">
@@ -225,6 +226,16 @@ export function LeftRail({
           <div className="foot-lbl">can be saved</div>
         </div>
       </footer>
+
+      <button className="rail-toggle" onClick={onToggleRail} aria-label="Toggle list">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+          {railOpen === false
+            ? <path d="M18 15l-6-6-6 6"/>
+            : <path d="M6 9l6 6 6-6"/>}
+        </svg>
+        <span>{railOpen === false ? `${sortedDeals.length} stores — tap to show` : 'Hide list'}</span>
+      </button>
     </aside>
   );
 }
