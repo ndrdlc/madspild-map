@@ -106,6 +106,7 @@ export default function App() {
           { headers: { Authorization: `Bearer ${key}` } }
         );
       }
+      if (res.status === 500) throw new Error('The search area is too large. Try reducing the radius or zooming in.');
       if (!res.ok) throw new Error(`API error ${res.status}`);
 
       const data = await res.json();
@@ -144,6 +145,16 @@ export default function App() {
     deals.find(d => d.id === selectedId) || null
   , [deals, selectedId]);
 
+  const selectedItems = useMemo(() => {
+    if (!selected) return [];
+    if (!query) return selected.items;
+    const q = query.toLowerCase();
+    const storeMatch = selected.store.toLowerCase().includes(q);
+    if (storeMatch) return selected.items;
+    const filtered = selected.items.filter(i => i.n.toLowerCase().includes(q));
+    return filtered.length > 0 ? filtered : selected.items;
+  }, [selected, query]);
+
   // ── Handlers ───────────────────────────────────────────────────────────────
 
   const onToggleSave = useCallback((id) => setSavedIds(s => {
@@ -180,8 +191,9 @@ export default function App() {
 
   const handleLocationChange = useCallback(({ lat, lng }) => {
     if (mapRef.current) mapRef.current.setView([lat, lng], 13);
-    loadDeals(lat, lng, distance);
-  }, [loadDeals, distance]);
+    setDistance(5);
+    loadDeals(lat, lng, 5);
+  }, [loadDeals]);
 
   const setTweak = (k, v) => setTweaks(t => ({ ...t, [k]: v }));
 
@@ -224,7 +236,7 @@ export default function App() {
 
         {selected && (
           <DetailCard
-            deal={selected}
+            deal={{ ...selected, items: selectedItems }}
             fmtKm={fmtKm}
             saved={savedIds.has(selected.id)}
             onToggleSave={onToggleSave}
