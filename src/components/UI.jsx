@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 // ── Primitives ───────────────────────────────────────────────────────────────
 
@@ -35,7 +35,37 @@ export function LeftRail({
   savedIds, onToggleSave,
   CHAINS, fmtKm,
   loading, error,
+  onLocationChange,
 }) {
+  const [geoStatus, setGeoStatus] = useState('');
+
+  const handleSearchKeyDown = useCallback(async (e) => {
+    if (e.key !== 'Enter') return;
+    const q = query.trim();
+    if (!q || !/\d/.test(q)) return;
+
+    const isZip = /^\d{4}$/.test(q);
+    setGeoStatus('Searching location…');
+    try {
+      const url = isZip
+        ? `https://nominatim.openstreetmap.org/search?postalcode=${encodeURIComponent(q)}&country=Denmark&format=json&limit=1`
+        : `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)},Denmark&format=json&limit=1`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data && data.length > 0) {
+        onLocationChange({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) });
+        setQuery('');
+        setGeoStatus('');
+      } else {
+        setGeoStatus('Location not found');
+        setTimeout(() => setGeoStatus(''), 3000);
+      }
+    } catch {
+      setGeoStatus('Search failed, try again');
+      setTimeout(() => setGeoStatus(''), 3000);
+    }
+  }, [query, onLocationChange, setQuery]);
+
   return (
     <aside className="rail">
       <header className="rail-head">
@@ -58,12 +88,14 @@ export function LeftRail({
           <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>
         </svg>
         <input
-          placeholder="Search store or product…"
+          placeholder="Store, product, zip or address…"
           value={query}
           onChange={e => setQuery(e.target.value)}
+          onKeyDown={handleSearchKeyDown}
         />
         {query && <button className="clear" onClick={() => setQuery('')}>×</button>}
       </div>
+      {geoStatus && <div className="geo-status">{geoStatus}</div>}
 
       <div className="filters">
         <div className="row">

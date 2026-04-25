@@ -189,6 +189,10 @@ input { font: inherit; }
   width: 16px; height: 16px;
 }
 .search .clear:hover { color: var(--ink); }
+.geo-status {
+  font-size: 11px; color: var(--ink-3);
+  padding: 4px 14px 0;
+}
 
 /* Filters */
 .filters {

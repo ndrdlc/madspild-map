@@ -178,6 +178,11 @@ export default function App() {
 
   const handleMapReady = useCallback((map) => { mapRef.current = map; }, []);
 
+  const handleLocationChange = useCallback(({ lat, lng }) => {
+    if (mapRef.current) mapRef.current.setView([lat, lng], 13);
+    loadDeals(lat, lng, distance);
+  }, [loadDeals, distance]);
+
   const setTweak = (k, v) => setTweaks(t => ({ ...t, [k]: v }));
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -194,6 +199,7 @@ export default function App() {
         savedIds={savedIds} onToggleSave={onToggleSave}
         CHAINS={CHAINS} fmtKm={fmtKm}
         loading={loading} error={error}
+        onLocationChange={handleLocationChange}
       />
 
       <main className="canvas">
