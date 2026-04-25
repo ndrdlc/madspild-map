@@ -576,9 +576,8 @@ input { font: inherit; }
 /* ---------- Search-area button ---------- */
 .search-area-btn {
   position: absolute;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 20px;
+  right: 20px;
   z-index: 900;
   background: var(--paper);
   color: var(--ink);
@@ -595,7 +594,7 @@ input { font: inherit; }
   white-space: nowrap;
 }
 .search-area-btn:hover { background: var(--paper-2); }
-.search-area-btn:active { transform: translateX(-50%) translateY(1px); }
+.search-area-btn:active { transform: translateY(1px); }
 .search-area-btn:disabled { opacity: 0.55; cursor: default; }
 
 /* ---------- Leaflet overrides ---------- */
@@ -692,7 +691,7 @@ a.btn {
   .today-sep { display: none; }
   .today-lbl { font-size: 9.5px; }
   .today-val { font-size: 14px; }
-  .search-area-btn { top: auto; bottom: 80px; }
+  .search-area-btn { bottom: 16px; right: 16px; }
 
   /* Bottom-sheet on mobile — fixed so canvas overflow:hidden can't clip it */
   .detail {
