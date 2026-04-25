@@ -60,6 +60,8 @@ function applyTheme(theme, accent) {
 
 // ── App ──────────────────────────────────────────────────────────────────────
 
+const cleanCity = (name) => name?.replace(/\s*Kommune$/i, '').trim() || null;
+
 export default function App() {
   const [rawDeals, setRawDeals] = useState([]);
   const [loading, setLoading]   = useState(false);
@@ -173,7 +175,7 @@ export default function App() {
     }
   }, []);
 
-  const handleSearchArea = useCallback(() => {
+  const handleSearchArea = useCallback(async () => {
     const map = mapRef.current;
     if (!map) return;
     const c = map.getCenter();
@@ -186,12 +188,22 @@ export default function App() {
     r = Math.min(r, 25);
     setDistance(Math.ceil(r));
     loadDeals(c.lat, c.lng, r);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${c.lat}&lon=${c.lng}&format=json&addressdetails=1`
+      );
+      const data = await res.json();
+      const addr = data.address || {};
+      const newCity = cleanCity(addr.city || addr.town || addr.village || addr.municipality);
+      if (newCity) setCity(newCity);
+    } catch {}
   }, [loadDeals]);
 
   const handleMapReady = useCallback((map) => { mapRef.current = map; }, []);
 
-  const handleLocationChange = useCallback(({ lat, lng, city: newCity }) => {
+  const handleLocationChange = useCallback(({ lat, lng, city: rawCity }) => {
     if (mapRef.current) mapRef.current.setView([lat, lng], 13);
+    const newCity = cleanCity(rawCity);
     if (newCity) setCity(newCity);
     setDistance(10);
     loadDeals(lat, lng, 10);
