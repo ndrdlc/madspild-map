@@ -48,12 +48,14 @@ export function LeftRail({
     setGeoStatus('Searching location…');
     try {
       const url = isZip
-        ? `https://nominatim.openstreetmap.org/search?postalcode=${encodeURIComponent(q)}&country=Denmark&format=json&limit=1`
-        : `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)},Denmark&format=json&limit=1`;
+        ? `https://nominatim.openstreetmap.org/search?postalcode=${encodeURIComponent(q)}&country=Denmark&format=json&limit=1&addressdetails=1`
+        : `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)},Denmark&format=json&limit=1&addressdetails=1`;
       const res = await fetch(url);
       const data = await res.json();
       if (data && data.length > 0) {
-        onLocationChange({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) });
+        const addr = data[0].address || {};
+        const city = addr.city || addr.town || addr.village || addr.municipality || null;
+        onLocationChange({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), city });
         setQuery('');
         setGeoStatus('');
       } else {
@@ -300,7 +302,7 @@ export function DetailCard({ deal, onClose, fmtKm, saved, onToggleSave }) {
 
 // ── Today badge ───────────────────────────────────────────────────────────────
 
-export function TodayBadge({ sortedDeals, loading }) {
+export function TodayBadge({ sortedDeals, loading, city = 'Copenhagen' }) {
   const totalSave = sortedDeals.reduce(
     (s, d) => s + d.items.reduce((m, i) => m + (i.was - i.now), 0), 0
   );
@@ -311,7 +313,7 @@ export function TodayBadge({ sortedDeals, loading }) {
     <div className="today">
       <div className="today-row">
         <div>
-          <div className="today-lbl">Today in Copenhagen</div>
+          <div className="today-lbl">Today in {city}</div>
           <div className="today-val">
             {loading ? '…' : `${Math.round(totalSave)} kr`}
             {' '}<span className="today-sub">can be saved</span>

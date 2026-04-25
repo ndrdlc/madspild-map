@@ -70,6 +70,7 @@ export default function App() {
   const [query, setQuery]         = useState('');
   const [filter, setFilter]       = useState('all');
   const [distance, setDistance]   = useState(10);
+  const [city, setCity]           = useState('Copenhagen');
   const [selectedId, setSelectedId] = useState(null);
   const [hoveredId, setHoveredId]   = useState(null);
   const [savedIds, setSavedIds]     = useState(() => {
@@ -138,7 +139,7 @@ export default function App() {
   }), [deals, filter, query]);
 
   const sortedDeals = useMemo(() =>
-    mapDeals.filter(d => d._d <= distance).slice().sort((a, b) => a._d - b._d)
+    mapDeals.filter(d => d._d <= distance * 1.1).slice().sort((a, b) => a._d - b._d)
   , [mapDeals, distance]);
 
   const selected = useMemo(() =>
@@ -189,10 +190,11 @@ export default function App() {
 
   const handleMapReady = useCallback((map) => { mapRef.current = map; }, []);
 
-  const handleLocationChange = useCallback(({ lat, lng }) => {
+  const handleLocationChange = useCallback(({ lat, lng, city: newCity }) => {
     if (mapRef.current) mapRef.current.setView([lat, lng], 13);
-    setDistance(5);
-    loadDeals(lat, lng, 5);
+    if (newCity) setCity(newCity);
+    setDistance(10);
+    loadDeals(lat, lng, 10);
   }, [loadDeals]);
 
   const setTweak = (k, v) => setTweaks(t => ({ ...t, [k]: v }));
@@ -224,7 +226,7 @@ export default function App() {
           onMapReady={handleMapReady}
         />
 
-        <TodayBadge sortedDeals={sortedDeals} loading={loading} />
+        <TodayBadge sortedDeals={sortedDeals} loading={loading} city={city} />
 
         <button
           className="search-area-btn"
