@@ -43,6 +43,16 @@
   --font-ui: "Inter Tight", "Söhne", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-display: "Instrument Serif", "Source Serif 4", Georgia, serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Aliases for newer components (Preferences, RecipePanel) */
+  --color-background-primary:    var(--paper);
+  --color-background-secondary:  var(--paper-2);
+  --color-background-tertiary:   var(--paper);
+  --color-text-primary:          var(--ink);
+  --color-text-secondary:        var(--ink-2);
+  --color-text-danger:           #b3261e;
+  --color-border-secondary:      var(--line-strong);
+  --color-border-tertiary:       var(--line);
 }
 
 /* Bone theme */
@@ -144,7 +154,32 @@ input { font: inherit; }
 
 .rail-head {
   padding: 26px 22px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
+
+.rail-back {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  align-self: flex-start;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-1);
+  transition: background 0.12s;
+}
+.rail-back:hover { background: var(--paper-2); }
+.rail-back:active { transform: scale(0.97); }
 
 .brand {
   display: flex; align-items: center; gap: 12px;
@@ -311,11 +346,26 @@ input { font: inherit; }
   color: var(--ink);
 }
 .heart {
-  position: absolute; top: -2px; right: -4px;
-  color: var(--ink-4); padding: 4px; border-radius: 4px;
+  margin-top: 6px;
+  width: 26px; height: 26px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--ink-4);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
-.heart:hover { color: var(--ink); background: var(--paper); }
-.heart.on { color: var(--accent); }
+.heart:hover, .heart:focus-visible {
+  color: var(--accent);
+  background: var(--paper-2);
+  border-color: var(--accent-2);
+  outline: none;
+}
+.heart.on {
+  color: var(--accent);
+  border-color: var(--accent-2);
+  background: var(--accent-2);
+}
 
 .empty {
   padding: 40px 20px;
@@ -388,20 +438,80 @@ input { font: inherit; }
   padding: 12px 16px;
   box-shadow: var(--shadow-1);
   backdrop-filter: blur(8px);
+  min-width: 200px;
+  max-width: 360px;
 }
-.today-row { display: flex; align-items: center; gap: 16px; }
-.today-sep { width: 1px; height: 28px; background: var(--line); }
-.today-lbl {
-  font-size: 10.5px; color: var(--ink-3);
-  text-transform: uppercase; letter-spacing: 0.07em;
+.today-city {
+  font-size: 10.5px;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-weight: 500;
+  margin-bottom: 6px;
 }
-.today-val {
-  font-family: var(--font-display); font-size: 20px; color: var(--ink);
-  line-height: 1.1; margin-top: 3px;
+.today-stats {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
-.today-sub {
-  font-family: var(--font-ui); font-size: 11px; color: var(--ink-3);
-  margin-left: 4px;
+.today-stat { min-width: 0; flex: 1; }
+.today-stat-value {
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--ink);
+  line-height: 1.1;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  white-space: nowrap;
+}
+.today-stat-sub {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--ink-3);
+  margin-top: 2px;
+}
+.today-sep {
+  width: 1px;
+  align-self: stretch;
+  background: var(--line);
+  flex-shrink: 0;
+}
+.today-info {
+  background: none;
+  border: none;
+  padding: 0 2px;
+  font-size: 12px;
+  color: var(--ink-4);
+  cursor: pointer;
+  line-height: 1;
+  font-family: inherit;
+  border-radius: 999px;
+  transition: color 0.12s, background 0.12s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+}
+.today-info:hover,
+.today-info:focus-visible {
+  color: var(--ink);
+  background: var(--paper-2);
+  outline: none;
+}
+.today-info--on {
+  color: var(--ink);
+  background: var(--paper-2);
+}
+.today-tip {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ink-2);
+  font-family: var(--font-ui);
 }
 
 /* Scale */
@@ -546,6 +656,26 @@ input { font: inherit; }
 }
 .btn--primary:hover { background: var(--ink-2); }
 
+.btn--secondary {
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  font-family: var(--font-ui);
+  cursor: pointer;
+}
+.btn--secondary:hover {
+  background: var(--paper-2);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.detail-actions-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.detail-actions-row .btn { width: 100%; }
+
 /* ---------- Tweaks panel ---------- */
 .tweaks {
   position: fixed; right: 20px; bottom: 20px;
@@ -596,6 +726,51 @@ input { font: inherit; }
 .search-area-btn:hover { background: var(--paper-2); }
 .search-area-btn:active { transform: translateY(1px); }
 .search-area-btn:disabled { opacity: 0.55; cursor: default; }
+
+/* ---------- Recipe-ideas button (opens RecipePanel) ---------- */
+.recipes-fab {
+  position: absolute;
+  bottom: 20px;
+  right: 170px;
+  z-index: 900;
+  background: var(--chain-green);
+  color: #fff;
+  border: 1px solid var(--chain-green);
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: 12.5px;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  box-shadow: var(--shadow-2);
+  transition: opacity .12s, transform .1s;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.recipes-fab:hover { opacity: 0.9; }
+.recipes-fab:active { transform: translateY(1px); }
+.recipes-fab:disabled { opacity: 0.55; cursor: default; }
+
+/* ---------- Preferences sheet close button ---------- */
+.prefs-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: none;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--ink-2);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-family: inherit;
+}
+.prefs-close:hover { background: var(--paper-2); }
+.prefs-sheet { position: relative; }
 
 /* ---------- Leaflet overrides ---------- */
 .mm-pin { background: none !important; border: none !important; }
@@ -686,12 +861,31 @@ a.btn {
   /* Stats are already visible in TodayBadge on the map — hide duplicate footer */
   .rail-foot { display: none; }
 
-  .today { top: 12px; right: 12px; padding: 8px 12px; max-width: calc(100vw - 72px); }
-  .today-row { flex-direction: column; gap: 6px; }
-  .today-sep { display: none; }
-  .today-lbl { font-size: 9.5px; }
-  .today-val { font-size: 14px; }
+  .today {
+    top: 12px; right: 12px;
+    padding: 10px 12px;
+    min-width: 0;
+    max-width: 220px;
+  }
+  .today-city {
+    font-size: 9.5px;
+    margin-bottom: 6px;
+  }
+  .today-stats {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .today-sep {
+    width: auto;
+    height: 1px;
+    align-self: stretch;
+  }
+  .today-stat-value { font-size: 16px; }
+  .today-stat-sub { font-size: 10.5px; }
+  .today-tip { font-size: 11.5px; }
   .search-area-btn { bottom: 16px; right: 16px; }
+  .recipes-fab { bottom: 64px; right: 16px; }
 
   /* Bottom-sheet on mobile — fixed so canvas overflow:hidden can't clip it */
   .detail {

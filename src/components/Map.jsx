@@ -51,10 +51,17 @@ function Inner({ deals, selectedId, hoveredId, onSelect, onHover, onMapReady }) 
   ));
 }
 
-export default function MapCanvas({ deals, selectedId, hoveredId, onSelect, onHover, onMapReady }) {
+export default function MapCanvas({ deals, selectedId, hoveredId, onSelect, onHover, onMapReady, center }) {
+  // MapContainer's `center` prop is only honoured on the first mount; once the
+  // map exists, panning happens via mapRef.setView() in the parent. So this
+  // value is the *initial* position when the map first renders.
+  const initialCenter = center && center.lat != null && center.lng != null
+    ? [center.lat, center.lng]
+    : [55.6761, 12.5683];
+
   return (
     <MapContainer
-      center={[55.6761, 12.5683]}
+      center={initialCenter}
       zoom={14}
       style={{ height: '100%', width: '100%' }}
       zoomControl
