@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { geocodeInput } from '../utils/geo.js';
 
 // ── Primitives ───────────────────────────────────────────────────────────────
 
@@ -37,6 +38,7 @@ export function LeftRail({
   loading, error,
   onLocationChange,
   railOpen, onToggleRail,
+  onBack,
 }) {
   const [geoStatus, setGeoStatus] = useState('');
 
@@ -45,18 +47,11 @@ export function LeftRail({
     const q = query.trim();
     if (!q || !/\d/.test(q)) return;
 
-    const isZip = /^\d{4}$/.test(q);
     setGeoStatus('Searching location…');
     try {
-      const url = isZip
-        ? `https://nominatim.openstreetmap.org/search?postalcode=${encodeURIComponent(q)}&country=Denmark&format=json&limit=1&addressdetails=1`
-        : `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)},Denmark&format=json&limit=1&addressdetails=1`;
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data && data.length > 0) {
-        const addr = data[0].address || {};
-        const city = addr.city || addr.town || addr.village || addr.municipality || null;
-        onLocationChange({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), city });
+      const result = await geocodeInput(q);
+      if (result) {
+        onLocationChange({ lat: result.lat, lng: result.lng, city: result.city });
         setQuery('');
         setGeoStatus('');
       } else {
@@ -72,12 +67,22 @@ export function LeftRail({
   return (
     <aside className={`rail${railOpen === false ? ' rail--collapsed' : ''}`}>
       <header className="rail-head">
+        {onBack && (
+          <button className="rail-back" onClick={onBack} aria-label="Back to feed">
+            ← Back
+          </button>
+        )}
         <div className="brand">
-          <svg viewBox="0 0 24 24" width="22" height="22" className="brand-mark">
-            <circle cx="12" cy="12" r="11" fill="none" stroke="currentColor" strokeWidth="1.2"/>
-            <path d="M12 4 C 8 9, 8 15, 12 20 C 16 15, 16 9, 12 4 Z"
-                  fill="currentColor" opacity="0.9"/>
-            <circle cx="12" cy="12" r="1.4" fill="var(--paper)"/>
+          <svg viewBox="0 0 24 24" width="44" height="44" className="brand-mark" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            {/* Left leaf */}
+            <path d="M12 12 C 9 11, 6 9, 5 6 C 8 5, 11 7, 12 12 Z" fill="currentColor" fillOpacity="0.22"/>
+            {/* Right leaf */}
+            <path d="M12 12 C 15 11, 18 9, 19 6 C 16 5, 13 7, 12 12 Z" fill="currentColor" fillOpacity="0.22"/>
+            {/* Stem */}
+            <path d="M12 12 L 12 20"/>
+            {/* Veins */}
+            <path d="M12 12 L 7.5 7.5" strokeWidth="0.9" strokeOpacity="0.55"/>
+            <path d="M12 12 L 16.5 7.5" strokeWidth="0.9" strokeOpacity="0.55"/>
           </svg>
           <div>
             <div className="brand-name">Madspild<span className="brand-accent">·</span>Map</div>
@@ -242,7 +247,7 @@ export function LeftRail({
 
 // ── Detail card ───────────────────────────────────────────────────────────────
 
-export function DetailCard({ deal, onClose, fmtKm, saved, onToggleSave }) {
+export function DetailCard({ deal, onClose, fmtKm, saved, onToggleSave, onAskRecipes }) {
   if (!deal) return null;
   const totalWas = deal.items.reduce((s, i) => s + i.was, 0);
   const totalNow = deal.items.reduce((s, i) => s + i.now, 0);
@@ -314,14 +319,25 @@ export function DetailCard({ deal, onClose, fmtKm, saved, onToggleSave }) {
           </div>
           <div className="save-pill">Save {saveKr} kr ({savePct}%)</div>
         </div>
-        <a
-          href={`https://www.google.com/maps/dir/?api=1&destination=${deal.lat},${deal.lng}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn btn--primary"
-        >
-          Get directions ↗
-        </a>
+        <div className="detail-actions-row">
+          {onAskRecipes && deal.items.length > 0 && (
+            <button
+              type="button"
+              className="btn btn--secondary"
+              onClick={onAskRecipes}
+            >
+              Recipe ideas with these items
+            </button>
+          )}
+          <a
+            href={`https://www.google.com/maps/dir/?api=1&destination=${deal.lat},${deal.lng}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn--primary"
+          >
+            Get directions ↗
+          </a>
+        </div>
       </footer>
     </section>
   );
@@ -329,7 +345,54 @@ export function DetailCard({ deal, onClose, fmtKm, saved, onToggleSave }) {
 
 // ── Today badge ───────────────────────────────────────────────────────────────
 
+const SAVINGS_TOOLTIP =
+  'Sum of (original price − discounted price) across every discounted item shown. ' +
+  'Real prices from the Salling API, but assumes every item is bought — actual ' +
+  'savings depend on how many deals you pick up.';
+
+const CO2_TOOLTIP =
+  'Rough estimate at 0.4 kg CO₂ per rescued item. A simple flat assumption — ' +
+  'real impact varies a lot by food type (meat is far higher than vegetables) ' +
+  'and only counts if the item is actually rescued rather than thrown out.';
+
+function InfoToggle({ id, label, openId, setOpenId }) {
+  const isOpen = openId === id;
+  return (
+    <button
+      type="button"
+      className={`today-info ${isOpen ? 'today-info--on' : ''}`}
+      onClick={(e) => {
+        e.stopPropagation();
+        setOpenId(isOpen ? null : id);
+      }}
+      aria-expanded={isOpen}
+      aria-label={`More about ${label}`}
+    >
+      ⓘ
+    </button>
+  );
+}
+
 export function TodayBadge({ sortedDeals, loading, city = 'Copenhagen' }) {
+  const [openId, setOpenId] = useState(null);
+  const badgeRef = useRef(null);
+
+  // Close any open tooltip when the user taps outside the badge.
+  useEffect(() => {
+    if (!openId) return;
+    function onDocClick(e) {
+      if (badgeRef.current && !badgeRef.current.contains(e.target)) {
+        setOpenId(null);
+      }
+    }
+    document.addEventListener('mousedown', onDocClick);
+    document.addEventListener('touchstart', onDocClick);
+    return () => {
+      document.removeEventListener('mousedown', onDocClick);
+      document.removeEventListener('touchstart', onDocClick);
+    };
+  }, [openId]);
+
   const totalSave = sortedDeals.reduce(
     (s, d) => s + d.items.reduce((m, i) => m + (i.was - i.now), 0), 0
   );
@@ -337,24 +400,34 @@ export function TodayBadge({ sortedDeals, loading, city = 'Copenhagen' }) {
   const co2 = Math.round(itemCount * 0.4 * 10) / 10;
 
   return (
-    <div className="today">
-      <div className="today-row">
-        <div>
-          <div className="today-lbl">Today in {city}</div>
-          <div className="today-val">
-            {loading ? '…' : `${Math.round(totalSave)} kr`}
-            {' '}<span className="today-sub">can be saved</span>
+    <div className="today" ref={badgeRef}>
+      <div className="today-city">{city}</div>
+
+      <div className="today-stats">
+        <div className="today-stat">
+          <div className="today-stat-value">
+            {loading ? '…' : `~${Math.round(totalSave)} kr`}
+            <InfoToggle id="savings" label="could be saved" openId={openId} setOpenId={setOpenId} />
           </div>
+          <div className="today-stat-sub">could be saved</div>
         </div>
-        <div className="today-sep"/>
-        <div>
-          <div className="today-lbl">Food rescued</div>
-          <div className="today-val">
-            {loading ? '…' : `${co2} kg`}
-            {' '}<span className="today-sub">CO₂e avoided</span>
+
+        <div className="today-sep" />
+
+        <div className="today-stat">
+          <div className="today-stat-value">
+            {loading ? '…' : `~${co2} kg`}
+            <InfoToggle id="co2" label="CO₂e estimate" openId={openId} setOpenId={setOpenId} />
           </div>
+          <div className="today-stat-sub">CO₂ estimate</div>
         </div>
       </div>
+
+      {openId && (
+        <div className="today-tip" role="tooltip">
+          {openId === 'savings' ? SAVINGS_TOOLTIP : CO2_TOOLTIP}
+        </div>
+      )}
     </div>
   );
 }

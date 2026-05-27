@@ -1,9 +1,37 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import MapCanvas from './components/Map.jsx';
 import { LeftRail, DetailCard, TodayBadge } from './components/UI.jsx';
+import Preferences from './components/Preferences.jsx';
+import RecipePanel from './components/RecipePanel.jsx';
+import MobileFeed from './components/MobileFeed.jsx';
+import { usePreferences } from './hooks/usePreferences.js';
+import { formatArea } from './utils/geo.js';
+
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(() =>
+    typeof window === 'undefined' ? false : window.matchMedia(query).matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const handler = (e) => setMatches(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, [query]);
+  return matches;
+}
 
 // ── Brand → chain colour key (maps to CSS vars --chain-green / red / blue) ──
-const BRAND_TO_CHAIN = { 'Føtex': 'green', 'Netto': 'red', 'Bilka': 'blue' };
+// Salling's API returns brand strings with varying casing and sub-formats
+// (e.g. "føtex food", "føtex city", "Føtex"), so we substring-match the
+// normalised brand against the known chain tokens — and fall back to the
+// store name if the brand field is missing or unrecognised.
+function chainForBrand(brand, storeName = '') {
+  const probe = `${brand || ''} ${storeName || ''}`.toLowerCase();
+  if (/føtex|foetex|fotex/.test(probe)) return 'green';
+  if (/netto/.test(probe))              return 'red';
+  if (/bilka/.test(probe))              return 'blue';
+  return 'ink';
+}
 
 const CHAINS = [
   { id: 'all',   label: 'All stores', dot: null },
@@ -28,7 +56,7 @@ function normalizeStore(raw, center) {
     id:      s.id,
     store:   s.name,
     brand:   s.brand,
-    chain:   BRAND_TO_CHAIN[s.brand] || 'ink',
+    chain:   chainForBrand(s.brand, s.name),
     address: `${s.address.street}, ${s.address.zip} ${s.address.city}`,
     lat, lng,
     _d: s.distance_km ?? haversineKm(center.lat, center.lng, lat, lng),
@@ -60,8 +88,6 @@ function applyTheme(theme, accent) {
 
 // ── App ──────────────────────────────────────────────────────────────────────
 
-const cleanCity = (name) => name?.replace(/\s*Kommune$/i, '').trim() || null;
-
 export default function App() {
   const [rawDeals, setRawDeals] = useState([]);
   const [loading, setLoading]   = useState(false);
@@ -82,6 +108,24 @@ export default function App() {
 
   const [tweaks, setTweaks]         = useState(TWEAKS);
   const [tweaksOpen, setTweaksOpen] = useState(false);
+  const [recipesOpen, setRecipesOpen] = useState(false);
+  const [recipeScope, setRecipeScope] = useState('all'); // 'all' | 'store'
+
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  const [mobileView, setMobileView] = useState('feed'); // 'feed' | 'map'
+
+  const {
+    preferences,
+    showOnboarding,
+    savePreferences: savePreferencesRaw,
+    editPreferences: editPreferencesRaw,
+    closeOnboarding,
+  } = usePreferences();
+
+  const editPreferences = useCallback(() => {
+    setSelectedId(null);
+    editPreferencesRaw();
+  }, [editPreferencesRaw]);
 
   useEffect(() => applyTheme(tweaks.theme, tweaks.accent), [tweaks.theme, tweaks.accent]);
   useEffect(() => { document.documentElement.dataset.density = tweaks.density; }, [tweaks.density]);
@@ -125,7 +169,29 @@ export default function App() {
     }
   }, []);
 
-  useEffect(() => { loadDeals(55.6761, 12.5683, 10); }, []);
+  // Initial deal fetch on mount. If the user has a saved location from a
+  // previous session, load deals there instead of the Copenhagen default.
+  useEffect(() => {
+    const lat = preferences?.location?.lat;
+    const lng = preferences?.location?.lng;
+    if (lat != null && lng != null) {
+      setCenter({ lat, lng });
+      loadDeals(lat, lng, 10);
+    } else {
+      loadDeals(55.6761, 12.5683, 10);
+    }
+    // Only run once on mount; preferences updates after mount go through
+    // handleLocationChange instead.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Keep the displayed city in sync with the saved preferences. This is the
+  // single source of truth for the city label, so it can't be stomped by
+  // intermediate re-renders.
+  useEffect(() => {
+    const savedCity = preferences?.location?.city;
+    if (savedCity) setCity(savedCity);
+  }, [preferences?.location?.city]);
 
   // ── Derived data ───────────────────────────────────────────────────────────
 
@@ -134,6 +200,7 @@ export default function App() {
   , [rawDeals, center]);
 
   const mapDeals = useMemo(() => deals.filter(d => {
+    if (!d.items?.length) return false;  // no active deals at this store
     if (filter !== 'all' && d.chain !== filter) return false;
     if (!query) return true;
     const q = query.toLowerCase();
@@ -151,12 +218,24 @@ export default function App() {
 
   const selectedItems = useMemo(() => {
     if (!selected) return [];
-    if (!query) return selected.items;
+
+    // Sort by soonest expiry first. Items without endTime go to the end.
+    // Stable secondary sort: deepest discount first when expiry ties.
+    const byExpiry = (a, b) => {
+      const ta = a.endTime ? new Date(a.endTime).getTime() : Infinity;
+      const tb = b.endTime ? new Date(b.endTime).getTime() : Infinity;
+      if (ta !== tb) return ta - tb;
+      return (b.pct ?? 0) - (a.pct ?? 0);
+    };
+
+    const baseItems = selected.items.slice().sort(byExpiry);
+
+    if (!query) return baseItems;
     const q = query.toLowerCase();
     const storeMatch = selected.store.toLowerCase().includes(q);
-    if (storeMatch) return selected.items;
-    const filtered = selected.items.filter(i => i.n.toLowerCase().includes(q));
-    return filtered.length > 0 ? filtered : selected.items;
+    if (storeMatch) return baseItems;
+    const filtered = baseItems.filter(i => i.n.toLowerCase().includes(q));
+    return filtered.length > 0 ? filtered : baseItems;
   }, [selected, query]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
@@ -194,28 +273,109 @@ export default function App() {
         `https://nominatim.openstreetmap.org/reverse?lat=${c.lat}&lon=${c.lng}&format=json&addressdetails=1`
       );
       const data = await res.json();
-      const addr = data.address || {};
-      const newCity = cleanCity(addr.city || addr.town || addr.village || addr.municipality);
-      if (newCity) setCity(newCity);
-    } catch {}
+      const area = formatArea(data.address);
+      if (area) setCity(area);
+    } catch {
+      // ignore — keep current city label if reverse geocoding fails
+    }
   }, [loadDeals]);
 
   const handleMapReady = useCallback((map) => { mapRef.current = map; }, []);
 
-  const handleLocationChange = useCallback(({ lat, lng, city: rawCity }) => {
+  const handleLocationChange = useCallback(({ lat, lng, city: area }) => {
     if (mapRef.current) mapRef.current.setView([lat, lng], 13);
-    const newCity = cleanCity(rawCity);
-    if (newCity) setCity(newCity);
+    if (area) setCity(area);
     setDistance(10);
     loadDeals(lat, lng, 10);
   }, [loadDeals]);
+
+  const savePreferences = useCallback((prefs) => {
+    savePreferencesRaw(prefs);
+    if (prefs.location?.lat != null && prefs.location?.lng != null) {
+      handleLocationChange({
+        lat: prefs.location.lat,
+        lng: prefs.location.lng,
+        city: prefs.location.city,
+      });
+    }
+  }, [savePreferencesRaw, handleLocationChange]);
 
   const setTweak = (k, v) => setTweaks(t => ({ ...t, [k]: v }));
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
+  const onSelectStoreFromFeed = useCallback((id) => {
+    setMobileView('map');
+    handleSelect(id);
+  }, [handleSelect]);
+
+  const handleBackToFeed = useCallback(() => {
+    setSelectedId(null);
+    setMobileView('feed');
+  }, []);
+
+  if (isMobile && mobileView === 'feed') {
+    return (
+      <>
+        <MobileFeed
+          city={city}
+          distance={distance}
+          sortedDeals={sortedDeals}
+          preferences={preferences}
+          loading={loading}
+          error={error}
+          onEditPreferences={editPreferences}
+          onOpenMap={() => setMobileView('map')}
+          onSelectStore={onSelectStoreFromFeed}
+        />
+        {showOnboarding && (
+          <Preferences
+            initial={preferences}
+            onSave={savePreferences}
+            onClose={preferences ? closeOnboarding : undefined}
+          />
+        )}
+      </>
+    );
+  }
+
+  const brandStripVisible = isMobile && mobileView === 'map' && !railOpen;
+
   return (
-    <div className="app">
+    <div className={`app${brandStripVisible ? ' app--brand-strip-visible' : ''}`}>
+      {brandStripVisible && (
+        <>
+          <div className="mfeed-brand-strip">
+            <div className="mfeed-topbar-brand" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="mfeed-topbar-mark">
+                <path d="M12 12 C 9 11, 6 9, 5 6 C 8 5, 11 7, 12 12 Z" fill="currentColor" fillOpacity="0.22"/>
+                <path d="M12 12 C 15 11, 18 9, 19 6 C 16 5, 13 7, 12 12 Z" fill="currentColor" fillOpacity="0.22"/>
+                <path d="M12 12 L 12 20"/>
+                <path d="M12 12 L 7.5 7.5" strokeWidth="0.9" strokeOpacity="0.55"/>
+                <path d="M12 12 L 16.5 7.5" strokeWidth="0.9" strokeOpacity="0.55"/>
+              </svg>
+              <span className="mfeed-topbar-name">
+                Madspild<span className="brand-accent">·</span>Map
+              </span>
+            </div>
+            <button
+              className="mfeed-icon-btn"
+              onClick={editPreferences}
+              aria-label="Edit preferences"
+              title="Edit preferences"
+            >
+              ⚙
+            </button>
+          </div>
+          <button
+            className="mfeed-back-btn"
+            onClick={handleBackToFeed}
+            aria-label="Back to feed"
+          >
+            ← Back
+          </button>
+        </>
+      )}
       <LeftRail
         query={query}       setQuery={setQuery}
         filter={filter}     setFilter={setFilter}
@@ -229,6 +389,7 @@ export default function App() {
         onLocationChange={handleLocationChange}
         railOpen={railOpen}
         onToggleRail={() => setRailOpen(o => !o)}
+        onBack={isMobile && mobileView === 'map' ? handleBackToFeed : null}
       />
 
       <main className="canvas">
@@ -239,6 +400,7 @@ export default function App() {
           onSelect={handleSelect}
           onHover={setHoveredId}
           onMapReady={handleMapReady}
+          center={center}
         />
 
         <TodayBadge sortedDeals={sortedDeals} loading={loading} city={city} />
@@ -251,6 +413,30 @@ export default function App() {
           {loading ? 'Loading…' : 'Search this area'}
         </button>
 
+        {preferences && sortedDeals.length > 0 && !recipesOpen && (
+          <button
+            className="recipes-fab"
+            onClick={() => { setRecipeScope('all'); setRecipesOpen(true); }}
+            title="Recipe ideas based on nearby discounts"
+          >
+            🍳 Recipe ideas
+          </button>
+        )}
+
+        {recipesOpen && preferences && (
+          <RecipePanel
+            deals={recipeScope === 'store' && selected
+              ? [{ ...selected, items: selectedItems }]
+              : sortedDeals}
+            preferences={preferences}
+            onClose={() => setRecipesOpen(false)}
+            onEditPreferences={editPreferences}
+            onSelectStore={handleSelect}
+            scope={recipeScope}
+            scopeStoreName={recipeScope === 'store' && selected ? selected.store : null}
+          />
+        )}
+
         {selected && (
           <DetailCard
             deal={{ ...selected, items: selectedItems }}
@@ -258,9 +444,21 @@ export default function App() {
             saved={savedIds.has(selected.id)}
             onToggleSave={onToggleSave}
             onClose={() => setSelectedId(null)}
+            onAskRecipes={() => {
+              setRecipeScope('store');
+              setRecipesOpen(true);
+            }}
           />
         )}
       </main>
+
+      {showOnboarding && (
+        <Preferences
+          initial={preferences}
+          onSave={savePreferences}
+          onClose={preferences ? closeOnboarding : undefined}
+        />
+      )}
 
       {tweaksOpen && (
         <div className="tweaks">
