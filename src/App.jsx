@@ -6,6 +6,7 @@ import RecipePanel from './components/RecipePanel.jsx';
 import MobileFeed from './components/MobileFeed.jsx';
 import { usePreferences } from './hooks/usePreferences.js';
 import { formatArea } from './utils/geo.js';
+import { Analytics } from '@vercel/analytics/react';
 
 function useMediaQuery(query) {
   const [matches, setMatches] = useState(() =>
@@ -492,6 +493,7 @@ export default function App() {
           </div>
         </div>
       )}
+      <Analytics />
     </div>
   );
 }
